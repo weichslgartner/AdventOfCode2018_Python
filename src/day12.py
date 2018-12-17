@@ -31,12 +31,13 @@ def sum_plant_spots(state, offset):
     return sum_pos, sum_pots
 
 
-def expand_field(current_state, offset):
-    if '#' in current_state[0:6]:
-        current_state = '.....' + current_state
-        offset += 5
-    if '#' in current_state[-6:-1]:
-        current_state = current_state + '.....'
+def expand_field(current_state, offset, expand_token = '.....'):
+
+    if '#' in current_state[0:len(expand_token)]:
+        current_state = expand_token + current_state
+        offset += len(expand_token)
+    if '#' in current_state[-len(expand_token):-1]:
+        current_state = current_state + expand_token
     return current_state, offset
 
 
@@ -71,7 +72,7 @@ def pot_replace(current_state, iterations, window_size, print_output=False):
         if n_pots_deque.count(n_pots) == DEQUE_LEN and (prev_offset == offset):
             break
         prev_offset = offset
-    if i < iterations:
+    if i < iterations-1:
         print(i)
         coeff = n_pots_deque[-1]
         intercept = sum_pot - (i * coeff)
