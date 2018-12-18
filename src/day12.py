@@ -1,10 +1,12 @@
 from collections import deque
 
 # max length of the deque for checking linear behavior
+from typing import Dict, List
+
 DEQUE_LEN = 10
 
 
-def parse_lines(file: str) -> (str, dict):
+def parse_lines(file: str) -> (str, Dict[str, str]):
     initial_state = ''
     replacement_rules = {}
     lines = open(file).readlines()
@@ -21,7 +23,7 @@ def parse_lines(file: str) -> (str, dict):
     return initial_state, replacement_rules
 
 
-def sum_plant_spots(state, offset):
+def sum_plant_spots(state: List[str], offset: int):
     sum_pos = 0
     sum_pots = 0
     for i, char in enumerate(state):
@@ -31,8 +33,7 @@ def sum_plant_spots(state, offset):
     return sum_pos, sum_pots
 
 
-def expand_field(current_state, offset, expand_token = '.....'):
-
+def expand_field(current_state: str, offset: int, expand_token='.....'):
     if '#' in current_state[0:len(expand_token)]:
         current_state = expand_token + current_state
         offset += len(expand_token)
@@ -41,7 +42,7 @@ def expand_field(current_state, offset, expand_token = '.....'):
     return current_state, offset
 
 
-def pot_replace(current_state, iterations, window_size, print_output=False):
+def pot_replace(current_state: str, iterations: int, window_size: int, print_output: bool = False):
     offset = 0
     prev_offset = 0
     n_pots_deque = deque([], maxlen=DEQUE_LEN)
@@ -53,9 +54,10 @@ def pot_replace(current_state, iterations, window_size, print_output=False):
         current_state_list = list(current_state)
         new_state = current_state
         new_state_list = current_state_list
+        #
         for pos in range(len(current_state) - window_size):
             center = pos + 2
-            cur_window = ''.join(new_state[pos:pos + window_size])
+            cur_window = new_state[pos:pos + window_size]
             if cur_window in rules:
                 new_state_list[center] = rules[cur_window]
             else:
@@ -72,8 +74,7 @@ def pot_replace(current_state, iterations, window_size, print_output=False):
         if n_pots_deque.count(n_pots) == DEQUE_LEN and (prev_offset == offset):
             break
         prev_offset = offset
-    if i < iterations-1:
-        print(i)
+    if i < iterations - 1:
         coeff = n_pots_deque[-1]
         intercept = sum_pot - (i * coeff)
         result = coeff * (iterations - 1) + intercept
@@ -85,10 +86,13 @@ def pot_replace(current_state, iterations, window_size, print_output=False):
 init_state, rules = parse_lines(file='../inputs/input_12.txt')
 # get any key for the window length
 window_size = len(next(iter(rules.keys())))
+
+## part1
 iterations = 20
 current_state = init_state
 pot_replace(current_state, iterations, window_size)
 
+## part2
 iterations = 50000000000
 current_state = init_state
 pot_replace(current_state, iterations, window_size)
