@@ -131,7 +131,7 @@ def should_move(succs, destinations):
     return True
 
 
-def do_fight(destinations: list, is_elf, succs, player):
+def do_fight(grid, goblins, elves, destinations, is_elf, succs, player):
     """
 
     :param destinations: list of oppents
@@ -237,7 +237,7 @@ def update_grid(grid, move, player_pos):
     grid[player_pos.y][player_pos.x] = '.'
 
 
-def update_player_dicts(move, player_pos, player, is_elf):
+def update_player_dicts(elves, goblins, move, player_pos, player, is_elf):
     if is_elf:
         del elves[player_pos]
         player.point = move
@@ -249,7 +249,8 @@ def update_player_dicts(move, player_pos, player, is_elf):
 
 
 def play_game(grid, elves, goblins, print_verbose=False, part2=True):
-    print_grid(grid)
+    if print_verbose:
+        print_grid(grid)
     n_elves = len(elves)
     for i in range(200):
         if print_verbose:
@@ -279,14 +280,15 @@ def play_game(grid, elves, goblins, print_verbose=False, part2=True):
                 move = select_next_post(grid, start, destinations)
                 if move != None:
                     update_grid(grid, move, player_pos)
-                    update_player_dicts(move, player_pos, player, is_elf)
+                    update_player_dicts(elves, goblins, move, player_pos, player, is_elf)
                     # we moved, new neighbors
                     succs = getSuccessors(move, grid)
 
-            fight, dead = do_fight(destinations, is_elf, succs, player)
+            fight, dead = do_fight(grid, goblins, elves, destinations, is_elf, succs, player)
             if n_elves != len(elves) and part2:
-                print('Elf died')
-                return False
+                if print_verbose:
+                    print('Elf died')
+                return False, None
             if dead != None:
                 killed.append(dead)
             if len(elves) == 0 or len(goblins) == 0:
@@ -312,18 +314,22 @@ def play_game(grid, elves, goblins, print_verbose=False, part2=True):
     return False
 
 
+def part1(raw_input):
+    grid, elves, goblins = parse_raw_input(raw_input)
+    _, score = play_game(grid, elves, goblins, part2=False)
+    return score
+
 def part2(raw_input):
     for i in range(5, 100):
-        print('elf hitpoints', i)
+        # print('elf hitpoints', i)
         grid_, elves_, goblins_ = parse_raw_input(raw_input, elf_attack_points=i)
         elves_win, score = play_game(grid_, elves_, goblins_, part2=True)
         if elves_win:
             return score
 
 
+
 raw_input = open('../inputs/input_15.txt').read().split('\n')
 
-grid, elves, goblins = parse_raw_input(raw_input)
-_, score = play_game(grid, elves, goblins, part2=False)
-print('part1', score)
+print('part1', part1(raw_input))
 print('part2', part2(raw_input))
