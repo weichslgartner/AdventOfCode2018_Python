@@ -34,6 +34,13 @@ class Tool(Enum):
     CLIMBING_GEAR = 3
 
 
+reg_to_tool = {
+    RegionType.ROCKY: {Tool.TORCH, Tool.CLIMBING_GEAR},
+    RegionType.WET: {Tool.NEITHER, Tool.CLIMBING_GEAR},
+    RegionType.NARROW: {Tool.NEITHER, Tool.TORCH}
+}
+
+
 @dataclasses.dataclass(order=True)
 class Element(object):
     tool: Tool = dataclasses.field(compare=False)
@@ -45,7 +52,7 @@ class Element(object):
         return hash(self.tool) ^ hash(self.point)
 
     def __eq__(self, other):
-        return self.tool == other.tool and self.point == other.point
+        return self.point == other.point and self.tool == other.tool
 
 
 class Day22:
@@ -106,6 +113,7 @@ class Day22:
         return risk_level
 
 
+@lru_cache(None)
 def get_neighbors(p: Point) -> List[Point]:
     neighbors = []
     for p in [Point(p.x + 1, p.y), Point(p.x, p.y - 1), Point(p.x, p.y + 1), Point(p.x - 1, p.y)]:
@@ -114,12 +122,6 @@ def get_neighbors(p: Point) -> List[Point]:
     return neighbors
 
 
-reg_to_tool = {
-    RegionType.ROCKY: {Tool.TORCH, Tool.CLIMBING_GEAR},
-    RegionType.WET: {Tool.NEITHER, Tool.CLIMBING_GEAR},
-    RegionType.NARROW: {Tool.NEITHER, Tool.TORCH}
-}
-
 @lru_cache(None)
 def change_tool(rtype_new: RegionType, rtype_old: RegionType, cur_tool: Tool) -> [bool, List[Tool]]:
     if cur_tool in reg_to_tool[rtype_new]:
@@ -127,26 +129,39 @@ def change_tool(rtype_new: RegionType, rtype_old: RegionType, cur_tool: Tool) ->
     return True, reg_to_tool[rtype_new] & reg_to_tool[rtype_old]
 
 
+def update_queue(cost_so_far, cur, target, n_tool, next_p, p_queue, new_costs):
+    new_cost = cost_so_far[cur] + new_costs
+    new_el = Element(n_tool, next_p, cur.priority)
+    if new_el not in cost_so_far or new_cost < cost_so_far[new_el]:
+        cost_so_far[new_el] = new_cost
+        new_el.priority = new_cost + target.manhattan_distance(next_p) * 1.3
+        # if new_el.priority < best_cost:
+        #  new_el.priority =  int(new_el.priority*1.3)
+        p_queue.put(new_el)
+
+
 def main():
-    day22 = Day22(depth=510, target=Point(10, 10))
+    # day22 = Day22(depth=510, target=Point(10, 10))
     day22 = Day22(depth=7305, target=Point(13, 734))
-    print(day22.eval_risk_level)
+    print("Part 1: ", day22.eval_risk_level)
     p_queue = PriorityQueue()
     start = Element(Tool.TORCH, Point(0, 0), 0)
-    p_queue.put(Element(Tool.TORCH, Point(0, 0), day22.target.manhattan_distance(Point(0, 0)) * 7))
-    best_cost = 1022  # sys.maxsize # 1034 # 995 wrong
-    visited_two = defaultdict(int)
+    p_queue.put(start)
+    best_cost =  sys.maxsize # 1034 # 995 wrong 1022  #
+    # visited_two = defaultdict(int)
     cost_so_far = dict()
     cost_so_far[start] = 0
-    i = 0
-    f = open('debug.csv', mode="w")
+    # i = 0
+    # f = open('debug.csv', mode="w")
     while not p_queue.empty():
         cur: Element = p_queue.get()
-        visited_two[cur.point] += 1
-        f.write(f"{cur.point.x},{cur.point.y},{visited_two[cur.point]}\n")
-        #if i == 10000:
+        # visited_two[cur.point] += 1
+        # f.write(f"{cur.point.x},{cur.point.y},{visited_two[cur.point]}\n")
+        # if i == 10000:
         #    print(cur.point, cost_so_far[cur], cur.tool, p_queue.qsize())
         #    i = 0
+        if cost_so_far[cur] + day22.target.manhattan_distance(cur.point) > best_cost:
+            continue
 
         if cur.point == day22.target and cost_so_far[cur] < best_cost:
             if cur.tool == Tool.TORCH:
@@ -156,31 +171,18 @@ def main():
                 best_cost = cost_so_far[cur] + 7
                 print("found with costs ", best_cost)
 
-        if cost_so_far[cur] + day22.target.manhattan_distance(cur.point) > best_cost:
-            continue
-
         for next_p in get_neighbors(cur.point):
             change, new_tools = change_tool(day22.ground(next_p), day22.ground(cur.point), cur.tool)
             # print(next_p,change)
             if change:
                 for n_tool in new_tools:
-                    new_cost = cost_so_far[cur] + 1 + 7
-                    new_el = Element(n_tool, next_p, cur.priority)
-                    if new_el not in cost_so_far or new_cost < cost_so_far[new_el]:
-                        cost_so_far[new_el] = new_cost
-                        new_el.priority = new_cost + int(day22.target.manhattan_distance(next_p) * 1.3)
-                        p_queue.put(new_el)
+                    update_queue(cost_so_far, cur, day22.target, n_tool, next_p, p_queue, 8)
             else:
-                new_cost = cost_so_far[cur] + 1
-                new_el = Element(cur.tool, next_p, cur.priority)
-                if new_el not in cost_so_far or new_cost < cost_so_far[new_el]:
-                    cost_so_far[new_el] = new_cost
-                    new_el.priority = new_cost + int(day22.target.manhattan_distance(next_p) * 1.3)
-                    p_queue.put(new_el)
-        i += 1
-    print(best_cost)
+                update_queue(cost_so_far, cur, day22.target, cur.tool, next_p, p_queue, 1)
+    # i += 1
+    print("Part 2: ", best_cost)
 
 
 if __name__ == "__main__":
-    #main()
-    cProfile.run('main()')
+    main()
+    # cProfile.run('main()')
