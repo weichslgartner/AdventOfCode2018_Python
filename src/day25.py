@@ -18,21 +18,22 @@ class Point(namedtuple('Point', 'w x y z')):
         return abs(self.w - other.w) + abs(self.x - other.x) + abs(self.y - other.y) + abs(self.z - other.z)
 
 
-def initial_fill(points, constellations):
+def initial_fill(points):
+    constellations = []
     for p in points:
         found = False
         for c in constellations:
             for p2 in c:
-
                 # print(p,p2,md)
                 if p.manhattan_distance(p2) <= 3:
                     c.append(p)
                     found = True
-                    break
+                    #break
             if found:
                 break
         if not found:
             constellations.append([p])
+    return constellations
 
 
 def parse_input(file_name: str) -> List[Point]:
@@ -45,8 +46,8 @@ def parse_input(file_name: str) -> List[Point]:
 
 
 def solve(points: List[Point]):
-    constellations = []
-    initial_fill(points, constellations)
+    constellations = initial_fill(points)
+    print(constellations)
     clusters = [[i] for i in range(len(constellations))]
     for i, c in enumerate(constellations):
         for p in c:
