@@ -1,6 +1,8 @@
+import cProfile
 from collections import namedtuple
 from functools import lru_cache
 from typing import List
+from numba import jit
 
 
 class Point(namedtuple('Point', 'w x y z')):
@@ -18,22 +20,31 @@ class Point(namedtuple('Point', 'w x y z')):
         return abs(self.w - other.w) + abs(self.x - other.x) + abs(self.y - other.y) + abs(self.z - other.z)
 
 
-def initial_fill(points):
-    constellations = []
-    for p in points:
-        found = False
-        for c in constellations:
-            for p2 in c:
-                # print(p,p2,md)
-                if p.manhattan_distance(p2) <= 3:
-                    c.append(p)
-                    found = True
-                    #break
-            if found:
-                break
-        if not found:
-            constellations.append([p])
-    return constellations
+@jit
+def solve(points: List[Point]):
+    constellations = {}
+    const_dict = {}
+    for i, p in enumerate(points[:-1]):
+        if p not in const_dict:
+            constellations[i] = [p]
+            const_dict[p] = i
+        for p2 in points[i + 1:]:
+            if p.manhattan_distance(p2) <= 3:
+                constellations[const_dict[p]].append(p2)
+                if p2 in const_dict and const_dict[p] != const_dict[p2]:
+                    merge_constellations(const_dict, constellations, p, p2)
+                else:
+                    const_dict[p2] = const_dict[p]
+    return len(constellations)
+
+
+@jit
+def merge_constellations(const_dict, constellations, p, p2):
+    old_idx = const_dict[p]
+    for pc in constellations[old_idx]:
+        const_dict[pc] = const_dict[p2]
+        constellations[const_dict[p2]].append(pc)
+    del constellations[old_idx]
 
 
 def parse_input(file_name: str) -> List[Point]:
@@ -45,33 +56,13 @@ def parse_input(file_name: str) -> List[Point]:
     return points
 
 
-def solve(points: List[Point]):
-    constellations = initial_fill(points)
-    print(constellations)
-    clusters = [[i] for i in range(len(constellations))]
-    for i, c in enumerate(constellations):
-        for p in c:
-            for j in range(i + 1, len(constellations)):
-                for p2 in constellations[j]:
-                    if p.manhattan_distance(p2) <= 3:
-                        clusters[i].append(j)
-    # print(constellations)
-    print(clusters)
-    unique_sets = set()
-    cnt = 0
-    for cluster in clusters:
-        before_len = len(unique_sets)
-        for el in cluster:
-            unique_sets.update(clusters[el])
-        if len(unique_sets) > before_len:
-            cnt += 1
-    print(constellations)
-    print(cnt)  # 431  too high
-    return cnt
-
-
-if __name__ == "__main__":
+def main():
     assert solve(parse_input("../inputs/input_25_test.txt")) == 2, "test 0"
     assert solve(parse_input("../inputs/input_25_test1.txt")) == 4, "test 0"
     assert solve(parse_input("../inputs/input_25_test2.txt")) == 3, "test 2"
     assert solve(parse_input("../inputs/input_25_test3.txt")) == 8, "test 3"
+    print("Part 1: ", solve(parse_input("../inputs/input_25.txt")))
+
+
+if __name__ == "__main__":
+    cProfile.run('main()')
