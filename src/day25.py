@@ -1,8 +1,7 @@
-import cProfile
+# import cProfile
 from collections import namedtuple
 from functools import lru_cache
 from typing import List
-from numba import jit
 
 
 class Point(namedtuple('Point', 'w x y z')):
@@ -20,7 +19,6 @@ class Point(namedtuple('Point', 'w x y z')):
         return abs(self.w - other.w) + abs(self.x - other.x) + abs(self.y - other.y) + abs(self.z - other.z)
 
 
-@jit
 def solve(points: List[Point]):
     constellations = {}
     const_dict = {}
@@ -38,7 +36,6 @@ def solve(points: List[Point]):
     return len(constellations)
 
 
-@jit
 def merge_constellations(const_dict, constellations, p, p2):
     old_idx = const_dict[p]
     for pc in constellations[old_idx]:
@@ -65,4 +62,4 @@ def main():
 
 
 if __name__ == "__main__":
-    cProfile.run('main()')
+    main()
