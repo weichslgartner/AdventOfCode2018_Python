@@ -47,8 +47,7 @@ def num_in_range(nanobots: List[Nanobot], sbot: Nanobot):
 
 def part_1(nanobots: List[Nanobot]) -> int:
     sbot = max(nanobots, key=lambda x: x[1])
-    n_bots_range = num_in_range(nanobots, sbot)
-    return n_bots_range
+    return num_in_range(nanobots, sbot)
 
 
 def zabs(x: ArithRef):
