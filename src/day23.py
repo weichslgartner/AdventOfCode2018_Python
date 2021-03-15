@@ -78,8 +78,7 @@ def part_2(nanobots: List[Nanobot]) -> int:
 
 def main():
     nbots = parse_input("../inputs/input_23.txt")
-    n_bots_range = part_1(nbots)
-    print("Part 1:", n_bots_range)
+    print("Part 1:", part_1(nbots))
     print("Part 2:", part_2(nbots))
 
 
