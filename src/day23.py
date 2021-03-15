@@ -3,7 +3,7 @@ from collections import namedtuple
 from functools import lru_cache
 from typing import List
 
-from z3 import *
+from z3 import Ints, Optimize, Int, Sum, If, set_param, ArithRef
 
 set_param('parallel.enable', True)
 
