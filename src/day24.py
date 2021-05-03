@@ -3,6 +3,7 @@ from enum import Enum
 from itertools import chain
 from typing import List
 
+VERBOSE = False
 
 class ArmyType(str, Enum):
     infection = 'Infection'
@@ -36,11 +37,11 @@ class Army:
         Army.global_id_cnt += 1
 
     def __repr__(self):
-        return f"{self.army_type} with ID {self.group_id}  {self.global_id} contains {self.units} units. hitpoints {self.hitpoints}, effective_power {self.effective_power}"
+        return f"{self.army_type} with ID {self.group_id}  {self.global_id} contains {self.units} units. hitpoints {self.hitpoints}, effective_power {self.effective_power} weak to {self.weaknesses} immune to {self.immune}"
 
     def damage_received(self, damage: int):
         units_killed = min(damage // self.hitpoints, self.units)
-        print(f"Units killed {units_killed}")
+        # print(f"Units killed {units_killed}")
         self.units -= units_killed
         self.effective_power = self.units * self.attack_power
 
@@ -50,6 +51,21 @@ class Army:
         if self.attack_type in other.weaknesses:
             return self.effective_power * 2
         return self.effective_power
+
+
+def pos_parenthesis(tokenz: List[str]) -> int:
+    i = 7
+    if '(' not in tokenz[7]:
+        return i
+    for token in tokenz[7:]:
+        if token.startswith("("):
+            tokenz[i] = token[1:]
+        elif token.endswith(")"):
+            tokenz[i] = token[:-1]
+            break
+        i += 1
+    i += 1
+    return i
 
 
 def parse_immune_weaknesses(tokens: List[str]) -> (List[Damage], List[Damage]):
@@ -99,16 +115,15 @@ def parse_input(file_name: str) -> tuple[dict[int, Army], list[Army], list[Army]
             elif len(line) == 0:
                 continue
             line_buffer = line
-            print(line)
+            #print(line)
             # if is_second_line:
-            army = parse_army(armies, army_type, group_id, line_buffer)
+            army = parse_army(army_type, group_id, line_buffer)
             armies[army.global_id] = army
             if army_type == ArmyType.infection:
                 infect_armies.append(army)
             else:
                 immune_armies.append(army)
             group_id += 1
-            line_buffer = ""
             #    is_second_line = False
         #  else:
         #     is_second_line = True
@@ -116,9 +131,9 @@ def parse_input(file_name: str) -> tuple[dict[int, Army], list[Army], list[Army]
     return armies, infect_armies, immune_armies
 
 
-def parse_army(armies, army_type, group_id, line_buffer):
+def parse_army(army_type: ArmyType, group_id: int, line_buffer: str) -> Army:
     tokenz = line_buffer.split()
-    print(tokenz)
+    #print(tokenz)
     units = int(tokenz[0])
     hitpoints = int(tokenz[4])
     initiative = int(tokenz[-1])
@@ -131,24 +146,11 @@ def parse_army(armies, army_type, group_id, line_buffer):
     attack_power = int(tokenz[i])
     i += 1
     attack_type = Damage(tokenz[i])
-    print(tokenz[7:i + 1])
+    #print(tokenz[7:i + 1])
     return Army(units=units, hitpoints=hitpoints, initiative=initiative, weaknesses=weaknesses, immune=immune,
                 army_type=army_type, attack_power=attack_power, attack_type=attack_type, group_id=group_id)
 
 
-def pos_parenthesis(tokenz):
-    i = 7
-    if '(' not in tokenz[7]:
-        return i
-    for token in tokenz[7:]:
-        if token.startswith("("):
-            tokenz[i] = token[1:]
-        elif token.endswith(")"):
-            tokenz[i] = token[:-1]
-            break
-        i += 1
-    i += 1
-    return i
 
 
 def target_round(attack_army, target_armies, excluded):
@@ -159,7 +161,10 @@ def target_round(attack_army, target_armies, excluded):
         if im_army.global_id in excluded:
             continue
         damage = attack_army.damage_dealt_on(im_army)
-        print(
+        if damage == 0:
+            continue
+        if VERBOSE:
+            print(
             f"{attack_army.army_type} army {attack_army.group_id} would deal  defending group {im_army.group_id} {damage}")
         if best_target is None:
             best_target = im_army
@@ -171,7 +176,7 @@ def target_round(attack_army, target_armies, excluded):
             elif im_army.effective_power > best_target.effective_power:
                 best_target = im_army
             elif im_army.effective_power == best_target.effective_power \
-                    and im_army.initiative > im_army.initiative:
+                    and im_army.initiative >= best_target.initiative:
                 best_target = im_army
 
     if best_target is not None:
@@ -196,9 +201,13 @@ def attack(armies, target_dict):
         if army.global_id not in target_dict:
             continue
         victim_id = target_dict[army.global_id]
-        print(f"{army.army_type} {army.group_id} attacks {armies[victim_id].group_id}")
+        if VERBOSE:
+            print(f"{army.army_type} {army.group_id} attacks {armies[victim_id].group_id}")
         if victim_id in armies:
             damage = army.damage_dealt_on(armies[victim_id])
+            if VERBOSE:
+                print(f"{army.global_id-1}->{victim_id-1}")
+
             armies[victim_id].damage_received(damage)
             if armies[victim_id].units <= 0:
                 # del armies[victim_id]
@@ -211,7 +220,7 @@ def target_selection(armies, immune_armies, infect_armies):
     for army in infect_armies:
         attack = target_round(army, immune_armies, target_dict.values())
         if attack is not None:
-            print(f"target is {armies[attack].group_id}")
+            #print(f"target is {armies[attack].group_id}")
             target_dict[army.global_id] = attack
     for army in immune_armies:
         attack = target_round(army, infect_armies, target_dict.values())
@@ -220,21 +229,36 @@ def target_selection(armies, immune_armies, infect_armies):
     return target_dict
 
 
+def test():
+    army = parse_army(ArmyType.immune_system, 1, """1945 units each with 3360 hit points (immune to cold; weak to radiation) with an attack that does 16 cold damage at initiative 1
+""")
+    assert (army.immune[0] == Damage.cold)
+    assert (army.weaknesses[0] == Damage.radiation)
+
 def main():
+    test()
     armies: dict[Army]
     infect_armies: List[Army]
     immune_armies: List[Army]
     armies, infect_armies, immune_armies = parse_input("../inputs/input_24.txt")
+    i =0
     while len(immune_armies) > 0 and len(infect_armies) > 0:
         sort_armies(immune_armies, infect_armies)
-        print(infect_armies)
-        print(immune_armies)
+        if VERBOSE:
+            print(infect_armies)
+            print(immune_armies)
         target_dict = target_selection(armies, immune_armies, infect_armies)
-        print(target_dict)
+        if VERBOSE:
+            print(target_dict)
         deleted_armies = attack(armies, target_dict)
+
         immune_armies, infect_armies = delete_armies(deleted_armies, immune_armies, infect_armies)
-    print(infect_armies)
-    print(immune_armies)
+        if VERBOSE:
+            print(f"round {i}")
+            for a in sorted(infect_armies, key=lambda x: x.units):
+                print(a.global_id - 1, a.units)
+        i += 1
+    #print(immune_armies)
     result = 0
     for army in chain(infect_armies, immune_armies):
         result += army.units
