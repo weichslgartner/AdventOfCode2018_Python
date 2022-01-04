@@ -125,8 +125,6 @@ def parse_input(file_name: str) -> tuple[dict[int, Army], list[int], list[int]]:
             elif len(line) == 0:
                 continue
             line_buffer = line
-            # print(line)
-            # if is_second_line:
             army = parse_army(army_type, group_id, line_buffer)
             armies[army.global_id] = army
             if army_type == ArmyType.infection:
@@ -134,16 +132,11 @@ def parse_input(file_name: str) -> tuple[dict[int, Army], list[int], list[int]]:
             else:
                 immune_armies.append(army.global_id)
             group_id += 1
-            #    is_second_line = False
-        #  else:
-        #     is_second_line = True
-
     return armies, infect_armies, immune_armies
 
 
 def parse_army(army_type: ArmyType, group_id: int, line_buffer: str) -> Army:
     tokenz = line_buffer.split()
-    # print(tokenz)
     units = int(tokenz[0])
     hitpoints = int(tokenz[4])
     initiative = int(tokenz[-1])
@@ -156,7 +149,6 @@ def parse_army(army_type: ArmyType, group_id: int, line_buffer: str) -> Army:
     attack_power = int(tokenz[i])
     i += 1
     attack_type = Damage(tokenz[i])
-    # print(tokenz[7:i + 1])
     return Army(units=units, hitpoints=hitpoints, initiative=initiative, weaknesses=weaknesses, immune=immune,
                 army_type=army_type, attack_power=attack_power, attack_type=attack_type, group_id=group_id)
 
@@ -234,7 +226,6 @@ def target_selection(armies, immune_armies, infect_armies):
         army = armies[army_id]
         best_target = target_round(armies, army, immune_armies, target_dict.values())
         if best_target is not None:
-            # print(f"target is {armies[attack].group_id}")
             target_dict[army.global_id] = best_target
     for army_id in immune_armies:
         army = armies[army_id]
@@ -249,8 +240,6 @@ def fight(armies_, immune_armies_, infect_armies_):
     armies = deepcopy(armies_)
     immune_armies = deepcopy(immune_armies_)
     infect_armies = deepcopy(infect_armies_)
-    # armies  = armies_
-
     while len(immune_armies) > 0 and len(infect_armies) > 0:
         sort_armies(immune_armies, infect_armies, armies)
         if VERBOSE:
